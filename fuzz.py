@@ -12,7 +12,10 @@ def get_brackets(s):
                 i += 1
             newList.append(s[start:i+1])
         else:
-            newList.append(s[i])
+            if i < len(s) - 1 and s[i].isnumeric():
+                newList.append(s[i:i+2])
+            else:
+                newList.append(s[i])
         i += 1
     
     return newList
@@ -35,42 +38,97 @@ def read(lines):
                 new_node = root + str(counter)
                 nonTerms[new_node] = [rule[1:]]
                 new_rules = [rule[0], new_node]
-                nonTerms[root][i] = [new_rules]
+                nonTerms[root][i] = new_rules
                 delete_long_rules(new_node)
                 counter += 1
                 
     for nonTerm in list(nonTerms.keys()):
         delete_long_rules(nonTerm)
 
-    isEpsilon = defaultdict(bool)
-    concernedRules = defaultdict(list)
-    counter = defaultdict(int)
-    Q = deque()
-
     grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
 
     print(grammar)
-    
-
     print(nonTerms)
-    
-    
-    # def find_generative_element(node):
-    #     visited.add(node)
-    #     for verticies in nonTerms[node]:
-    #         for vertex in verticies:
-    #             if vertex[0].islower():
-    #                 continue
-    #             if vertex not in visited:
-    #                 find_generative_element(vertex)
 
+    # delete chain rules
 
-    # max_element = (0, 0)
-
-    # for key in nonTerms.keys():
-    #     visited = set([])
-    #     find_generative_element(key)
-    #     if len(visited) > max_element[0]:
-    #         max_element=(len(visited), key)        
+    pairs = []
+    for nonTerm in list(nonTerms.keys()):
+        pairs.append((nonTerm, nonTerm))
     
-    # generative_element = max_element[1]
+
+    new_rules = []
+    for nonTerm, rule in grammar:
+        if len(rule) == 1 and not rule[0][0].islower():
+            for i in range(len(pairs)):
+                if pairs[i][1] == nonTerm:
+                    pairs.append((pairs[i][0], nonTerm))
+        else:
+            new_rules.append((nonTerm, rule))
+    
+    for pair in pairs:
+        if pair[0] == pair[1]:
+            continue
+        new_rules += [(pair[0], rule) for rule in new_rules if rule[0] == pair[0]]
+
+    grammar = new_rules
+    print(grammar)
+    isGenerating = defaultdict(bool)
+    counter = defaultdict(int)
+    concernedRule = defaultdict(list)
+    Q = deque()
+
+    for i, (nonTerm, rule) in enumerate(grammar):
+        count = set([nT for nT in rule if not nT[0].islower()])
+        print(rule, count)
+        for nT in count:
+            concernedRule[nT] += [i]
+        counter[i] += len(count)
+        if len(count) == 0:
+            isGenerating[nonTerm] = True
+            Q.append(nonTerm)
+        else:
+            isGenerating[nonTerm] = False
+    print(isGenerating)
+    print(concernedRule)
+    print(counter)
+    while Q:
+        for i in range(len(Q)):
+            element = Q.popleft()
+            for rule in concernedRule[element]:
+                counter[rule] -= 1
+                if counter[rule] == 0:
+                    isGenerating[grammar[i][0]] = True
+                    Q.append(grammar[i][0])
+    new_rules = set([])
+    for key, val in isGenerating.items():
+        if not val:
+            new_rules = set.union(new_rules, set(set(concernedRule[key])))
+
+    grammar = [rule for i, rule in enumerate(grammar) if i not in new_rules]
+    print(isGenerating)
+    print(grammar)
+
+    # isEpsilon = defaultdict(int)
+    # concernedRules = defaultdict(list)
+    # counter = defaultdict(int)
+    # Q = deque()
+    # visited = set([])
+
+    # 
+    # for nonTerm in nonTerms.keys():
+    #     isEpsilon[nonTerm] = True
+    # for i, (nonTerm, rule) in enumerate(grammar):
+    #     count = sum([1 for nonTerm in rule if not nonTerm[0].islower()])
+    #     counter[i] = count
+    #     isEpsilon[nonTerm] += count
+
+    # for key, val in isEpsilon.items():
+    #     if val == 0:
+    #         Q.append(key)
+
+    # while Q:
+    #     for i in range(len(Q)):
+    #         nonTerm = Q.popleft()
+
+    # алгоритм удаления epsilon правил не нужен потому что нет эпислонов вообще 

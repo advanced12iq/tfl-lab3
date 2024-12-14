@@ -2,3 +2,8 @@ S - > [order66]ab
 S - > B
 B - > [order66]
 [order66] - > a
+
+S - > Ac
+A - > SD
+D - > aD
+A - > a
