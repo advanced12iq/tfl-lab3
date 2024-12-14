@@ -1,3 +1,4 @@
 S - > [order66]ab
 S - > B
-B - > a
+B - > [order66]
+[order66] - > a
