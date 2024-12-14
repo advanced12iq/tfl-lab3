@@ -1,21 +1,19 @@
 from collections import defaultdict, deque
-import string
 import sys
 sys.setrecursionlimit(10000)
 
-def get_brackets(l):
+def get_brackets(s):
     newList = []
-    for s in l:
-        i = 0
-        while i < len(s):
-            if s[i] == '[':
-                first = i
-                while s[i] != ']':
-                    i += 1
-                newList.append(s[first:i+1])
-            else:
-                newList.append(s[i])
-            i += 1
+    i = 0
+    while i < len(s):
+        if s[i] == '[':
+            start = i
+            while s[i] != ']':
+                i += 1
+            newList.append(s[start:i+1])
+        else:
+            newList.append(s[i])
+        i += 1
     
     return newList
 
@@ -24,9 +22,9 @@ def read(lines):
     rules = []
     nonTerms = defaultdict(list)
     for rule in lines:
-        rules.append(list(map(lambda r: r.strip().split(), rule.strip().split('- >'))))
+        rules.append(list(map(lambda r: r.replace(' ', ''), rule.strip().split('- >'))))
     for rule in rules:
-        nonTerms[rule[0][0]] += [get_brackets(rule[1])]
+        nonTerms[rule[0]] += [get_brackets(rule[1])]
     
 
     def delete_long_rules(root):
