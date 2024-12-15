@@ -13,8 +13,9 @@ def get_brackets(s):
                 i += 1
             newList.append(s[start:i+1])
         else:
-            if i < len(s) - 1 and s[i].isnumeric():
+            if i < len(s) - 1 and s[i+1].isnumeric():
                 newList.append(s[i:i+2])
+                i += 1
             else:
                 newList.append(s[i])
         i += 1
@@ -36,7 +37,7 @@ def read(lines):
         for i in range(len(nonTerms[root])):
             rule = nonTerms[root][i]
             if len(rule) > 2:
-                new_node = root + str(counter)
+                new_node = f"[newnode_{root + str(counter)}]"
                 nonTerms[new_node] = [rule[1:]]
                 new_rules = [rule[0], new_node]
                 nonTerms[root][i] = new_rules
@@ -73,6 +74,7 @@ def read(lines):
                     
     dfs('S')
     grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
+    # Удаление непорождающих нетерминалов
     isGenerating = defaultdict(bool)
     counter = defaultdict(int)
     concernedRule = defaultdict(list)
@@ -110,7 +112,7 @@ def read(lines):
 
     grammar = [rule for i, rule in enumerate(grammar) if i not in new_rules]
 
-
+    # удаление недостижмых
     adj = defaultdict(list)
     leads_to = defaultdict(set)
     rule2rule = defaultdict(list)
@@ -130,7 +132,7 @@ def read(lines):
         if nonTerm == 'S':
             dfs(i)
     grammar = [rule for i, rule in enumerate(grammar) if i in visited]
-
+    # Приведение к виду NT -> T
     new_rules= {}
     for i, (nonTerm, rule) in enumerate(grammar):
         count = set([nT for nT in rule if not nT[0].islower()])
@@ -155,7 +157,7 @@ def read(lines):
     adj = defaultdict(list)
     for nonTerm, rule in grammar:
         adj[nonTerm].append(rule)
-    
+    # Создание множеств Last first ...
     def dfs(nonTerm, first, f=0):
         visited.add(nonTerm)
         for rule in adj[nonTerm]:
@@ -193,7 +195,7 @@ def read(lines):
                 if preceding[rule[1]].union(last[rule[0]]) != preceding[rule[1]]:
                     changed=True
                 preceding[rule[1]] = preceding[rule[1]].union(last[rule[0]])
-
+    # Матрицу биграмм делаю
     followNT = defaultdict(set)
     for _, rule in grammar:
         if len(rule) == 2:
@@ -244,8 +246,9 @@ def read(lines):
                     d[nT][i][j] = answer
         return d['S'][0][len(word)-1]
 
-
+    # Генерация 
     terminals = list(set([rule[0] for _, rule in grammar if len(rule) == 1]))
+    terminals = ['a', 'b', 'c', 'd']
     starting_symbols = list(first['S'])
     res = []
     with open('tests_verify.txt', 'w') as tf:
