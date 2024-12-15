@@ -44,3 +44,11 @@ S - > acd[BC9]
 S - > [BC9]ddA 
 A - > h 
 [BC9] - > d
+
+S - > aSaa
+S - > bSa
+S - > T
+T - > bT
+T - > Ta
+T - > a
+T - > b

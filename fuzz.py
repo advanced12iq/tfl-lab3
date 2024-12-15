@@ -229,9 +229,10 @@ def read(lines):
     def cyk(grammar, ed, word):
         d= {nT : [[False for _ in range(len(word))] for _ in range(len(word))] for nT in nTs}
         for i in range(len(word)):
-            for nT, rule in ed.items():
-                if word[i] == rule[0]:
-                    d[nT][i][i]= True
+            for nT, rules in ed.items():
+                for rule in rules:
+                    if word[i] == rule:
+                        d[nT][i][i]= True
         for m in range(1, len(word)):
             for i in range(len(word) - m):
                 j = i + m
@@ -246,17 +247,25 @@ def read(lines):
 
     terminals = list(set([rule[0] for _, rule in grammar if len(rule) == 1]))
     starting_symbols = list(first['S'])
-    for _ in range(10):
-        cur = random.choice(starting_symbols)
-        while bigramms[cur[-1]]:
-            r = random.random()
-            if r < 0.01:
-                cur += random.choice(terminals)
-            elif r < 0.05:
-                break
-            else:
-                cur += random.choice(list(bigramms[cur[-1]]))
-        print(f"Слово {cur} принадлежит языку: {cyk(adj, ed, cur)}")
+    res = []
+    with open('tests_verify.txt', 'w') as tf:
+        with open('tests.txt', 'w') as f:
+            for i in range(100):
+                cur = random.choice(starting_symbols)
+                while bigramms[cur[-1]]:
+                    r = random.random()
+                    if r < 0.1:
+                        cur += random.choice(terminals)
+                    elif r < 0.25:
+                        break
+                    else:
+                        cur += random.choice(list(bigramms[cur[-1]]))
+                f.write(cur)
+                f.write(" 1\n" if cyk(adj, ed, cur) else " 0\n")
+                tf.write(cur + '\n')
+                if cyk(adj, ed, cur):
+                    res.append(i)
+    print(res)
     print_grammar()
 
     
