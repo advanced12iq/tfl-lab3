@@ -2,8 +2,23 @@ S - > [order66]ab
 S - > B
 B - > [order66]
 [order66] - > a
+D - > A
 
 S - > Ac
 A - > SD
 D - > aD
 A - > a
+
+S - > AB
+S - > CD
+A - > EF
+G - > AD
+C - > c
+
+S - > AS
+S - > BS
+S - > s
+E - > EF
+E - > FF
+A - > a
+F - > f

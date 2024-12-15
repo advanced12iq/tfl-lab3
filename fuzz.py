@@ -77,9 +77,10 @@ def read(lines):
     counter = defaultdict(int)
     concernedRule = defaultdict(list)
     Q = deque()
-
+    allnonTerms = set([])
     for i, (nonTerm, rule) in enumerate(grammar):
         count = set([nT for nT in rule if not nT[0].islower()])
+        allnonTerms = allnonTerms.union(count, nonTerm)
         print(rule, count)
         for nT in count:
             concernedRule[nT] += [i]
@@ -87,8 +88,9 @@ def read(lines):
         if len(count) == 0:
             isGenerating[nonTerm] = True
             Q.append(nonTerm)
-        else:
-            isGenerating[nonTerm] = False
+    for nT in allnonTerms:
+        if not isGenerating[nT]:
+            isGenerating[nT] = False
     print(isGenerating)
     print(concernedRule)
     print(counter)
@@ -98,8 +100,8 @@ def read(lines):
             for rule in concernedRule[element]:
                 counter[rule] -= 1
                 if counter[rule] == 0:
-                    isGenerating[grammar[i][0]] = True
-                    Q.append(grammar[i][0])
+                    isGenerating[grammar[rule][0]] = True
+                    Q.append(grammar[rule][0])
     new_rules = set([])
     for key, val in isGenerating.items():
         if not val:
@@ -109,6 +111,26 @@ def read(lines):
     print(isGenerating)
     print(grammar)
 
+    adj = defaultdict(list)
+    leads_to = defaultdict(set)
+    rule2rule = defaultdict(list)
+    for i, (nonTerm, rule) in enumerate(grammar):
+        adj[nonTerm] += [i]
+        leads_to[i] = set([nT for nT in rule if not nT[0].islower()])
+    for key, value in leads_to.items():
+        for nT in value:
+            if adj[nT]: rule2rule[key] += adj[nT]
+    visited = set([])
+    def dfs(root):
+        visited.add(root)
+        for next in rule2rule[root]:
+            if next not in visited:
+                dfs(next)
+    for i, (nonTerm, _) in enumerate(grammar):
+        if nonTerm == 'S':
+            dfs(i)
+    grammar = [rule for i, rule in enumerate(grammar) if i in visited]
+    print(grammar)
     # isEpsilon = defaultdict(int)
     # concernedRules = defaultdict(list)
     # counter = defaultdict(int)
