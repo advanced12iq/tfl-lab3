@@ -1,5 +1,6 @@
 from collections import defaultdict, deque
 import sys
+import random
 sys.setrecursionlimit(10000)
 
 def get_brackets(s):
@@ -45,30 +46,27 @@ def read(lines):
     for nonTerm in list(nonTerms.keys()):
         delete_long_rules(nonTerm)
 
-    grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
+    
 
     # delete chain rules
-
-    pairs = []
-    for nonTerm in list(nonTerms.keys()):
-        pairs.append((nonTerm, nonTerm))
     
 
+    visited = set([])
+    grammar = []
     new_rules = []
-    for nonTerm, rule in grammar:
-        if len(rule) == 1 and not rule[0][0].islower():
-            for i in range(len(pairs)):
-                if pairs[i][1] == nonTerm:
-                    pairs.append((pairs[i][0], nonTerm))
-        else:
-            new_rules.append((nonTerm, rule))
-    
-    for pair in pairs:
-        if pair[0] == pair[1]:
-            continue
-        new_rules += [(pair[0], rule) for rule in new_rules if rule[0] == pair[0]]
-
-    grammar = new_rules
+    def dfs(nT):
+        visited.add(nT)
+        for rule in nonTerms[nT]:
+            for nonTerm in rule:
+                if nonTerm[0].islower():
+                    continue
+                if nonTerm not in visited:
+                    dfs(nonTerm)
+        if len(nonTerms[nT]) == 1 and not nonTerms[nT][0][0][0].islower():
+            nonTerms[nT] = nonTerms[nonTerms[nT][0][0]].copy()
+                    
+    dfs('S')
+    grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
     isGenerating = defaultdict(bool)
     counter = defaultdict(int)
     concernedRule = defaultdict(list)
@@ -130,7 +128,7 @@ def read(lines):
     new_rules= {}
     for i, (nonTerm, rule) in enumerate(grammar):
         count = set([nT for nT in rule if not nT[0].islower()])
-        if len(rule) - len(count) > 0:
+        if len(rule) - len(count) > 0 and len(rule) == 2:
             if rule[0][0].islower():
                 if rule[0] not in new_rules:
                     new_rules[rule[0]] = f'[NT{nonTerm}To{rule[0]}]'
@@ -189,8 +187,51 @@ def read(lines):
                 if preceding[rule[1]].union(last[rule[0]]) != preceding[rule[1]]:
                     changed=True
                 preceding[rule[1]] = preceding[rule[1]].union(last[rule[0]])
-    print(first)
-    print(last)
-    print(follow)
-    print(preceding)
+
+    followNT = defaultdict(set)
+    for _, rule in grammar:
+        if len(rule) == 2:
+            followNT[rule[0]].add(rule[1])
+    
+    bigramms = defaultdict(set)
+    for key, gammas in last.items():
+        for y1 in gammas:
+            for y2 in follow[key]:
+                bigramms[y1].add(y2)
+
+    for key, gammas in preceding.items():
+        for y1 in gammas:
+            for y2 in first[key]:
+                bigramms[y1].add(y2)
+
+    for key, val in followNT.items():
+        for A2 in val:
+            for y1 in last[key]:
+                for y2 in first[A2]:
+                    bigramms[y1].add(y2)
+
+    terminals = list(set([rule[0] for _, rule in grammar if len(rule) == 1]))
+    starting_symbols = list(first['S'])
+    for _ in range(10):
+        cur = random.choice(starting_symbols)
+        while bigramms[cur[-1]]:
+            r = random.random()
+            if r < 0.01:
+                cur += random.choice(terminals)
+            elif r < 0.05:
+                break
+            else:
+                cur += random.choice(list(bigramms[cur[-1]]))
+        print(cur)
+
+
+
+
+
+    # print(first)
+    # print(last)
+    # print(follow)
+    # print(preceding)
+    # print(followNT)
+    # print(bigramms)
     print_grammar()

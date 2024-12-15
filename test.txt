@@ -30,3 +30,12 @@ X - > bY
 Y - > X
 Y - > cc
 Z - > ZX
+
+
+S - > A
+S - > a
+A - > B
+A - > b
+B - > C
+C - > D
+D - > d
