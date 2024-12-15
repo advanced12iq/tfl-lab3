@@ -26,13 +26,13 @@ def read(lines):
     rules = []
     nonTerms = defaultdict(list)
     for rule in lines:
-        rules.append(list(map(lambda r: r.replace(' ', ''), rule.strip().split('- >'))))
+        rules.append(list(map(lambda r: r.replace(' ', ''), rule.strip().split('->'))))
     for rule in rules:
-        nonTerms[rule[0]] += [get_brackets(rule[1])]
+        nonTerms[rule[0]] += list(map(get_brackets, map(lambda r: r.strip(), rule[1].split('|'))))
     
-
+    counter = 1
     def delete_long_rules(root):
-        counter = 1
+        nonlocal counter
         for i in range(len(nonTerms[root])):
             rule = nonTerms[root][i]
             if len(rule) > 2:
@@ -137,11 +137,11 @@ def read(lines):
         if len(rule) - len(count) > 0 and len(rule) == 2:
             if rule[0][0].islower():
                 if rule[0] not in new_rules:
-                    new_rules[rule[0]] = f'[NT{nonTerm}To{rule[0]}]'
+                    new_rules[rule[0]] = f'[NT_{nonTerm}_To_{rule[0]}]'
                 grammar[i][1][0] = new_rules[rule[0]]
             if rule[1][0].islower():
                 if rule[1] not in new_rules:
-                    new_rules[rule[1]] = f'[NT{nonTerm}To{rule[1]}]'
+                    new_rules[rule[1]] = f'[NT_{nonTerm}_To_{rule[1]}]'
                 grammar[i][1][1] = new_rules[rule[1]]
     for key, val in new_rules.items():
         grammar.append((val, [key]))
@@ -264,7 +264,7 @@ def read(lines):
                 f.write(" 1\n" if cyk(adj, ed, cur) else " 0\n")
                 tf.write(cur + '\n')
                 if cyk(adj, ed, cur):
-                    res.append(i)
+                    res.append(i+1)
     print(res)
     print_grammar()
 

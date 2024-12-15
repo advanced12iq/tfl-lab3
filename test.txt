@@ -1,54 +1,60 @@
-S - > [order66]ab
-S - > B
-B - > [order66]
-[order66] - > a
-D - > A
+S -> [order66]ab
+S -> B
+B -> [order66]
+[order66] -> a
+D -> A
 
-S - > Ac
-A - > SD
-D - > aD
-A - > a
+S -> Ac
+A -> SD
+D -> aD
+A -> a
 
-S - > AB
-S - > CD
-A - > EF
-G - > AD
-C - > c
+S -> AB
+S -> CD
+A -> EF
+G -> AD
+C -> c
 
-S - > AS
-S - > BS
-S - > s
-E - > EF
-E - > FF
-A - > a
-F - > f
+S -> AS
+S -> BS
+S -> s
+E -> EF
+E -> FF
+A -> a
+F -> f
 
-S - > aXbX
-S - > aZ
-X - > aY
-X - > bY
-Y - > X
-Y - > cc
-Z - > ZX
+S -> aXbX
+S -> aZ
+X -> aY
+X -> bY
+Y -> X
+Y -> cc
+Z -> ZX
 
 
-S - > A
-S - > a
-A - > B
-A - > b
-B - > C
-C - > D
-D - > d
+S -> A
+S -> a
+A -> B
+A -> b
+B -> C
+C -> D
+D -> d
 
-S - > acd[BC9] 
-S - > [BC9]ddA 
-A - > h 
-[BC9] - > d
+S -> acd[BC9] 
+S -> [BC9]ddA 
+A -> h 
+[BC9] -> d
 
-S - > aSaa
-S - > bSa
-S - > T
-T - > bT
-T - > Ta
-T - > a
-T - > b
+S -> aSaa
+S -> bSa
+S -> T
+T -> bT
+T -> Ta
+T -> a
+T -> b
+
+S -> SSa
+S -> SbSS
+S -> a
+
+S -> SSa | SbSS | a
