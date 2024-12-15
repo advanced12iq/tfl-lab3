@@ -47,9 +47,6 @@ def read(lines):
 
     grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
 
-    print(grammar)
-    print(nonTerms)
-
     # delete chain rules
 
     pairs = []
@@ -72,7 +69,6 @@ def read(lines):
         new_rules += [(pair[0], rule) for rule in new_rules if rule[0] == pair[0]]
 
     grammar = new_rules
-    print(grammar)
     isGenerating = defaultdict(bool)
     counter = defaultdict(int)
     concernedRule = defaultdict(list)
@@ -81,7 +77,6 @@ def read(lines):
     for i, (nonTerm, rule) in enumerate(grammar):
         count = set([nT for nT in rule if not nT[0].islower()])
         allnonTerms = allnonTerms.union(count, set([nonTerm]))
-        print(rule, count)
         for nT in count:
             concernedRule[nT] += [i]
         counter[i] += len(count)
@@ -91,9 +86,7 @@ def read(lines):
     for nT in allnonTerms:
         if not isGenerating[nT]:
             isGenerating[nT] = False
-    print(isGenerating)
-    print(concernedRule)
-    print(counter)
+
     visited = set([el for el in Q])
     while Q:
         for i in range(len(Q)):
@@ -112,8 +105,7 @@ def read(lines):
             new_rules = set.union(new_rules, set(set(concernedRule[key])))
 
     grammar = [rule for i, rule in enumerate(grammar) if i not in new_rules]
-    print(isGenerating)
-    print(grammar)
+
 
     adj = defaultdict(list)
     leads_to = defaultdict(set)
@@ -134,7 +126,6 @@ def read(lines):
         if nonTerm == 'S':
             dfs(i)
     grammar = [rule for i, rule in enumerate(grammar) if i in visited]
-    print(grammar)
 
     new_rules= {}
     for i, (nonTerm, rule) in enumerate(grammar):
@@ -154,27 +145,52 @@ def read(lines):
     def print_grammar():
         for nonTerm, rule in grammar:
             print(nonTerm, '- >', "".join(rule))
+
+    visited = set([])
+    first = defaultdict(set)
+    adj = defaultdict(list)
+    for nonTerm, rule in grammar:
+        adj[nonTerm].append(rule)
+    
+    def dfs(nonTerm, first, f=0):
+        visited.add(nonTerm)
+        for rule in adj[nonTerm]:
+            if rule[f][0].islower():
+                first[nonTerm].add(rule[f][0])
+            else:
+                if rule[f] not in visited:
+                    dfs(rule[f], first, f)
+                first[nonTerm] = first[nonTerm].union(first[rule[f]])
+
+    for nonTerm, rule in grammar:
+        if nonTerm not in visited:
+            dfs(nonTerm, first)
+    visited = set([])
+    last = defaultdict(set)
+    for nonTerm, rule in grammar:
+        if nonTerm not in visited:
+            dfs(nonTerm, last, -1)
+
+    follow = defaultdict(set)
+    changed= True
+    while changed:
+        changed=False
+        for (nonTerm, rule) in grammar:
+            if len(rule) > 1:
+                if follow[rule[0]].union(first[rule[1]]) != follow[rule[0]]:
+                    changed=True
+                follow[rule[0]] = follow[rule[0]].union(first[rule[1]])
+    preceding = defaultdict(set)
+    changed=True
+    while changed:
+        changed=False
+        for (nonTerm, rule) in grammar:
+            if len(rule) > 1:
+                if preceding[rule[1]].union(last[rule[0]]) != preceding[rule[1]]:
+                    changed=True
+                preceding[rule[1]] = preceding[rule[1]].union(last[rule[0]])
+    print(first)
+    print(last)
+    print(follow)
+    print(preceding)
     print_grammar()
-    # isEpsilon = defaultdict(int)
-    # concernedRules = defaultdict(list)
-    # counter = defaultdict(int)
-    # Q = deque()
-    # visited = set([])
-
-    # 
-    # for nonTerm in nonTerms.keys():
-    #     isEpsilon[nonTerm] = True
-    # for i, (nonTerm, rule) in enumerate(grammar):
-    #     count = sum([1 for nonTerm in rule if not nonTerm[0].islower()])
-    #     counter[i] = count
-    #     isEpsilon[nonTerm] += count
-
-    # for key, val in isEpsilon.items():
-    #     if val == 0:
-    #         Q.append(key)
-
-    # while Q:
-    #     for i in range(len(Q)):
-    #         nonTerm = Q.popleft()
-
-    # алгоритм удаления epsilon правил не нужен потому что нет эпислонов вообще 
