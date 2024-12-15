@@ -80,7 +80,7 @@ def read(lines):
     allnonTerms = set([])
     for i, (nonTerm, rule) in enumerate(grammar):
         count = set([nT for nT in rule if not nT[0].islower()])
-        allnonTerms = allnonTerms.union(count, nonTerm)
+        allnonTerms = allnonTerms.union(count, set([nonTerm]))
         print(rule, count)
         for nT in count:
             concernedRule[nT] += [i]
@@ -94,6 +94,7 @@ def read(lines):
     print(isGenerating)
     print(concernedRule)
     print(counter)
+    visited = set([el for el in Q])
     while Q:
         for i in range(len(Q)):
             element = Q.popleft()
@@ -101,7 +102,10 @@ def read(lines):
                 counter[rule] -= 1
                 if counter[rule] == 0:
                     isGenerating[grammar[rule][0]] = True
+                    if grammar[rule][0] in visited:
+                        continue
                     Q.append(grammar[rule][0])
+                    visited.add(grammar[rule][0])
     new_rules = set([])
     for key, val in isGenerating.items():
         if not val:
@@ -131,6 +135,26 @@ def read(lines):
             dfs(i)
     grammar = [rule for i, rule in enumerate(grammar) if i in visited]
     print(grammar)
+
+    new_rules= {}
+    for i, (nonTerm, rule) in enumerate(grammar):
+        count = set([nT for nT in rule if not nT[0].islower()])
+        if len(rule) - len(count) > 0:
+            if rule[0][0].islower():
+                if rule[0] not in new_rules:
+                    new_rules[rule[0]] = f'[NT{nonTerm}To{rule[0]}]'
+                grammar[i][1][0] = new_rules[rule[0]]
+            if rule[1][0].islower():
+                if rule[1] not in new_rules:
+                    new_rules[rule[1]] = f'[NT{nonTerm}To{rule[1]}]'
+                grammar[i][1][1] = new_rules[rule[1]]
+    for key, val in new_rules.items():
+        grammar.append((val, [key]))
+    
+    def print_grammar():
+        for nonTerm, rule in grammar:
+            print(nonTerm, '- >', "".join(rule))
+    print_grammar()
     # isEpsilon = defaultdict(int)
     # concernedRules = defaultdict(list)
     # counter = defaultdict(int)

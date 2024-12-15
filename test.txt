@@ -22,3 +22,11 @@ E - > EF
 E - > FF
 A - > a
 F - > f
+
+S - > aXbX
+S - > aZ
+X - > aY
+X - > bY
+Y - > X
+Y - > cc
+Z - > ZX
