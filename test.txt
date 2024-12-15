@@ -39,3 +39,8 @@ A - > b
 B - > C
 C - > D
 D - > d
+
+S - > acd[BC9] 
+S - > [BC9]ddA 
+A - > h 
+[BC9] - > d

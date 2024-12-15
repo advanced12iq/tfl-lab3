@@ -53,7 +53,6 @@ def read(lines):
 
     visited = set([])
     grammar = []
-    new_rules = []
     def dfs(nT):
         visited.add(nT)
         for rule in nonTerms[nT]:
@@ -62,8 +61,15 @@ def read(lines):
                     continue
                 if nonTerm not in visited:
                     dfs(nonTerm)
-        if len(nonTerms[nT]) == 1 and not nonTerms[nT][0][0][0].islower():
-            nonTerms[nT] = nonTerms[nonTerms[nT][0][0]].copy()
+        new_rules = []
+        for rule in nonTerms[nT]:
+            if len(rule) == 1 and not rule[0][0].islower():
+                new_rules += nonTerms[rule[0][0]]
+            else:
+                new_rules.append(rule)
+        nonTerms[nT] = new_rules.copy()
+        # if len(nonTerms[nT]) == 1 and not nonTerms[nT][0][0][0].islower():
+        #     nonTerms[nT] = nonTerms[nonTerms[nT][0][0]].copy()
                     
     dfs('S')
     grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
@@ -210,6 +216,34 @@ def read(lines):
                 for y2 in first[A2]:
                     bigramms[y1].add(y2)
 
+    
+    adj = defaultdict(list)
+    ed = defaultdict(list)
+    nTs = set([])
+    for nT, rule in grammar:
+        if len(rule) != 2:
+            ed[nT].append(rule[0][0])
+        else:
+            adj[nT].append(rule)
+        nTs.add(nT)          
+    def cyk(grammar, ed, word):
+        d= {nT : [[False for _ in range(len(word))] for _ in range(len(word))] for nT in nTs}
+        for i in range(len(word)):
+            for nT, rule in ed.items():
+                if word[i] == rule[0]:
+                    d[nT][i][i]= True
+        for m in range(1, len(word)):
+            for i in range(len(word) - m):
+                j = i + m
+                for nT, rules in grammar.items():
+                    answer = False
+                    for rule in rules:
+                        for k in range(i, j):
+                            answer = answer or (d[rule[0]][i][k] and d[rule[1]][k+1][j])
+                    d[nT][i][j] = answer
+        return d['S'][0][len(word)-1]
+
+
     terminals = list(set([rule[0] for _, rule in grammar if len(rule) == 1]))
     starting_symbols = list(first['S'])
     for _ in range(10):
@@ -222,16 +256,8 @@ def read(lines):
                 break
             else:
                 cur += random.choice(list(bigramms[cur[-1]]))
-        print(cur)
-
-
-
-
-
-    # print(first)
-    # print(last)
-    # print(follow)
-    # print(preceding)
-    # print(followNT)
-    # print(bigramms)
+        print(f"Слово {cur} принадлежит языку: {cyk(adj, ed, cur)}")
     print_grammar()
+
+    
+
