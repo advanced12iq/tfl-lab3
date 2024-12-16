@@ -1,10 +1,11 @@
-import sys
-from fuzz import read
+from fuzz import read, Grammar
 
 def main():
-    while True:
-        lines = sys.stdin.readlines()
-        read(lines)
+    grammar = Grammar()
+    grammar.readGrammar('S')
+    grammar.HNFTransform()
+    grammar.printGrammar()
+    read(grammar.rules)
 
 if __name__ == "__main__":
     main()

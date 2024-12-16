@@ -3,155 +3,218 @@ import sys
 import random
 sys.setrecursionlimit(10000)
 
-def get_brackets(s):
-    newList = []
-    i = 0
-    while i < len(s):
-        if s[i] == '[':
-            start = i
-            while s[i] != ']':
-                i += 1
-            newList.append(s[start:i+1])
-        else:
-            if i < len(s) - 1 and s[i+1].isnumeric():
-                newList.append(s[i:i+2])
-                i += 1
+
+def isNT(symbol : str) -> bool:
+    return not symbol[0].islower()
+
+
+def getSetOFNTs(rule : list) -> set:
+    return set([symbol for symbol in rule if isNT(symbol)])
+
+class Grammar():
+
+    def __init__(self):
+        self.NT_To_Rules = defaultdict(list)
+        self.rules = []
+        self.allNTs = set([])
+        self.terminals = set([])
+        self.startingNT = None
+        self.counter = 1
+
+
+    def readGrammar(self, startingNT : str):
+        lines = sys.stdin.readlines()
+
+        for line in lines:
+            line_splited = list(map(lambda r: r.replace(' ', ''), line.strip().split('->')))
+            NT = line_splited[0]
+            rightRule = list(map(lambda l : l.strip(), line_splited[1].split('|')))
+            self.NT_To_Rules[NT] += list(map(self.parseRule, rightRule))
+
+        self.updateGrammar()
+
+        self.startingNT = startingNT
+
+
+    def updateGrammar(self):
+        self.rules = []
+        for NT, rightRules in self.NT_To_Rules.items():
+            for rightRule in rightRules:
+                self.rules.append((NT, rightRule))
+        self.allNTs = set(self.NT_To_Rules.keys())
+
+        self.terminals = set([])
+        for _, rightRule in self.rules:
+            self.terminals = self.terminals.union(set([symbol for symbol in rightRule if not isNT(symbol)]))
+
+
+    def parseRule(self, s : str) -> list:
+        newList = []
+        i = 0
+        while i < len(s):
+            if s[i] == '[':
+                start = i
+                while s[i] != ']':
+                    i += 1
+                newList.append(s[start:i+1])
             else:
-                newList.append(s[i])
-        i += 1
-    
-    return newList
-
-
-def read(lines):
-    rules = []
-    nonTerms = defaultdict(list)
-    for rule in lines:
-        rules.append(list(map(lambda r: r.replace(' ', ''), rule.strip().split('->'))))
-    for rule in rules:
-        nonTerms[rule[0]] += list(map(get_brackets, map(lambda r: r.strip(), rule[1].split('|'))))
-    
-    counter = 1
-    def delete_long_rules(root):
-        nonlocal counter
-        for i in range(len(nonTerms[root])):
-            rule = nonTerms[root][i]
-            if len(rule) > 2:
-                new_node = f"[newnode_{root + str(counter)}]"
-                nonTerms[new_node] = [rule[1:]]
-                new_rules = [rule[0], new_node]
-                nonTerms[root][i] = new_rules
-                delete_long_rules(new_node)
-                counter += 1
-                
-    for nonTerm in list(nonTerms.keys()):
-        delete_long_rules(nonTerm)
-
+                if i < len(s) - 1 and s[i+1].isnumeric():
+                    newList.append(s[i:i+2])
+                    i += 1
+                else:
+                    newList.append(s[i])
+            i += 1
+        
+        return newList
     
 
-    # delete chain rules
+    def HNFTransform(self):
+        self.deleteLongRules()
+        self.deleteChainRules()
+        self.deleteNonGenerative()
+        self.deleteNonReacheble()
+        self.deleteAloneTerminals()
+
+
+    def deleteLongRules(self):
+        for NT in self.allNTs:
+            self.deleteLongRulesRecursion(NT)
+        self.updateGrammar()
     
 
-    visited = set([])
-    grammar = []
-    def dfs(nT):
-        visited.add(nT)
-        for rule in nonTerms[nT]:
-            for nonTerm in rule:
-                if nonTerm[0].islower():
-                    continue
-                if nonTerm not in visited:
-                    dfs(nonTerm)
-        new_rules = []
-        for rule in nonTerms[nT]:
-            if len(rule) == 1 and not rule[0][0].islower():
-                new_rules += nonTerms[rule[0][0]]
+    def deleteLongRulesRecursion(self, NT : str):
+        for i, rightRule in enumerate(self.NT_To_Rules[NT]):
+            if len(rightRule) > 2:
+                newNT = f"[new_NT_{NT + str(self.counter)}]"
+                self.counter += 1
+                self.NT_To_Rules[newNT] = [rightRule[1:]]
+                newRightRule = [rightRule[0], newNT]
+                self.NT_To_Rules[NT][i] = newRightRule
+                self.deleteLongRulesRecursion(newNT)
+
+
+    def deleteChainRules(self):
+        visited = set([])
+        self.deleteChainRulesRecursion(self.startingNT, visited)
+        self.updateGrammar()
+
+
+    def deleteChainRulesRecursion(self, NT_root : str, visited : set):
+        visited.add(NT_root)
+        for rightRule in self.NT_To_Rules[NT_root]:
+            for NT in getSetOFNTs(rightRule):
+                if NT not in visited:
+                    self.deleteChainRulesRecursion(NT, visited)
+        newRules = []
+        for rightRule in self.NT_To_Rules[NT_root]:
+            if len(rightRule) == 1 and isNT(rightRule[0]):
+                newRules += self.NT_To_Rules[rightRule[0]]
             else:
-                new_rules.append(rule)
-        nonTerms[nT] = new_rules.copy()
-        # if len(nonTerms[nT]) == 1 and not nonTerms[nT][0][0][0].islower():
-        #     nonTerms[nT] = nonTerms[nonTerms[nT][0][0]].copy()
-                    
-    dfs('S')
-    grammar = [(s, l) for s in nonTerms.keys() for l in nonTerms[s]]
-    # Удаление непорождающих нетерминалов
-    isGenerating = defaultdict(bool)
-    counter = defaultdict(int)
-    concernedRule = defaultdict(list)
-    Q = deque()
-    allnonTerms = set([])
-    for i, (nonTerm, rule) in enumerate(grammar):
-        count = set([nT for nT in rule if not nT[0].islower()])
-        allnonTerms = allnonTerms.union(count, set([nonTerm]))
-        for nT in count:
-            concernedRule[nT] += [i]
-        counter[i] += len(count)
-        if len(count) == 0:
-            isGenerating[nonTerm] = True
-            Q.append(nonTerm)
-    for nT in allnonTerms:
-        if not isGenerating[nT]:
-            isGenerating[nT] = False
+                newRules.append(rightRule)
+        self.NT_To_Rules[NT_root] = newRules.copy()
 
-    visited = set([el for el in Q])
-    while Q:
-        for i in range(len(Q)):
-            element = Q.popleft()
-            for rule in concernedRule[element]:
-                counter[rule] -= 1
-                if counter[rule] == 0:
-                    isGenerating[grammar[rule][0]] = True
-                    if grammar[rule][0] in visited:
-                        continue
-                    Q.append(grammar[rule][0])
-                    visited.add(grammar[rule][0])
-    new_rules = set([])
-    for key, val in isGenerating.items():
-        if not val:
-            new_rules = set.union(new_rules, set(set(concernedRule[key])))
 
-    grammar = [rule for i, rule in enumerate(grammar) if i not in new_rules]
+    def deleteNonGenerative(self):
+        isGenerating = defaultdict(bool)
+        counter = defaultdict(int)
+        concernedRule = defaultdict(list)
+        Q = deque()
+        allNTs = set([])
+        for i, (NT1, rightRule) in enumerate(self.rules):
+            count = getSetOFNTs(rightRule)
+            allNTs = allNTs.union(count, set([NT1]))
+            for NT2 in count:
+                concernedRule[NT2] += [i]
+            counter[i] += len(count)
+            if len(count) == 0:
+                isGenerating[NT1] = True
+                Q.append(NT1)
+        for NT in allNTs:
+            if not isGenerating[NT]:
+                isGenerating[NT] = False
 
-    # удаление недостижмых
-    adj = defaultdict(list)
-    leads_to = defaultdict(set)
-    rule2rule = defaultdict(list)
-    for i, (nonTerm, rule) in enumerate(grammar):
-        adj[nonTerm] += [i]
-        leads_to[i] = set([nT for nT in rule if not nT[0].islower()])
-    for key, value in leads_to.items():
-        for nT in value:
-            if adj[nT]: rule2rule[key] += adj[nT]
-    visited = set([])
-    def dfs(root):
-        visited.add(root)
-        for next in rule2rule[root]:
+        visited = set([NT for NT in Q])
+        while Q:
+            for i in range(len(Q)):
+                element = Q.popleft()
+                for rule in concernedRule[element]:
+                    counter[rule] -= 1
+                    if counter[rule] == 0:
+                        isGenerating[self.rules[rule][0]] = True
+                        if self.rules[rule][0] in visited:
+                            continue
+                        Q.append(self.rules[rule][0])
+                        visited.add(self.rules[rule][0])
+        newRules = set([])
+        for NT, val in isGenerating.items():
+            if not val:
+                newRules = set.union(newRules, set(set(concernedRule[NT])))
+        self.rules = [rule for i, rule in enumerate(self.rules) if i not in newRules]
+        self.NT_To_Rules = defaultdict(list)
+        for NT, rightRule in self.rules:
+            self.NT_To_Rules[NT] += [rightRule]
+        self.updateGrammar()
+
+
+    def deleteNonReacheble(self):
+        rule2rule = defaultdict(list)
+        NT_To_RuleNumber = defaultdict(list)
+        RuleNumber_To_NTs = defaultdict(set)
+        for i, (NT, rightRule) in enumerate(self.rules):
+            NT_To_RuleNumber[NT] += [i]
+            RuleNumber_To_NTs[i] = getSetOFNTs(rightRule)
+        for RuleNumber, NTs in RuleNumber_To_NTs.items():
+            for NT in NTs:
+                if NT_To_RuleNumber[NT]:
+                    rule2rule[RuleNumber] += NT_To_RuleNumber[NT]
+        
+        visited = set([])
+        for ruleNumber, (NT, _) in enumerate(self.rules):
+            if NT == self.startingNT:
+                self.deleteNonReachebleRecursion(ruleNumber, visited, rule2rule)
+
+        self.rules = [rule for i, rule in enumerate(self.rules) if i in visited]
+        self.NT_To_Rules = defaultdict(list)
+        for NT, rightRule in self.rules:
+            self.NT_To_Rules[NT] += [rightRule]
+        self.updateGrammar()
+
+
+    def deleteNonReachebleRecursion(self, ruleNumber : int, visited : set, rule2rule : defaultdict):
+        visited.add(ruleNumber)
+        for next in rule2rule[ruleNumber]:
             if next not in visited:
-                dfs(next)
-    for i, (nonTerm, _) in enumerate(grammar):
-        if nonTerm == 'S':
-            dfs(i)
-    grammar = [rule for i, rule in enumerate(grammar) if i in visited]
-    # Приведение к виду NT -> T
-    new_rules= {}
-    for i, (nonTerm, rule) in enumerate(grammar):
-        count = set([nT for nT in rule if not nT[0].islower()])
-        if len(rule) - len(count) > 0 and len(rule) == 2:
-            if rule[0][0].islower():
-                if rule[0] not in new_rules:
-                    new_rules[rule[0]] = f'[NT_{nonTerm}_To_{rule[0]}]'
-                grammar[i][1][0] = new_rules[rule[0]]
-            if rule[1][0].islower():
-                if rule[1] not in new_rules:
-                    new_rules[rule[1]] = f'[NT_{nonTerm}_To_{rule[1]}]'
-                grammar[i][1][1] = new_rules[rule[1]]
-    for key, val in new_rules.items():
-        grammar.append((val, [key]))
-    
-    def print_grammar():
-        for nonTerm, rule in grammar:
-            print(nonTerm, '- >', "".join(rule))
+                self.deleteNonReachebleRecursion(next, visited, rule2rule)
 
+
+    def deleteAloneTerminals(self):
+        newRules= {}
+        for i, (NT, rightRule) in enumerate(self.rules):
+            count = getSetOFNTs(rightRule)
+            if len(rightRule) == 2 and len(count) < 2:
+                if not isNT(rightRule[0]):
+                    if rightRule[0] not in newRules:
+                        newRules[rightRule[0]] = f'[NT_{NT}_To_{rightRule[0]}]'
+                    self.rules[i][1][0] = newRules[rightRule[0]]
+                if not isNT(rightRule[1]):
+                    if rightRule[1] not in newRules:
+                        newRules[rightRule[1]] = f'[NT_{NT}_To_{rightRule[1]}]'
+                    self.rules[i][1][1] = newRules[rightRule[1]]
+        for key, val in newRules.items():
+            self.rules.append((val, [key]))
+        
+        self.NT_To_Rules = defaultdict(list)
+        for NT, rightRule in self.rules:
+            self.NT_To_Rules[NT] += [rightRule]
+        self.updateGrammar()
+
+    def printGrammar(self):
+        for NT, rightRule in self.rules:
+            print(NT, '- >', "".join(rightRule))
+
+
+def read(grammar):
+    
     visited = set([])
     first = defaultdict(set)
     adj = defaultdict(list)
@@ -269,7 +332,6 @@ def read(lines):
                 if cyk(adj, ed, cur):
                     res.append(i+1)
     print(res)
-    print_grammar()
 
     
 
