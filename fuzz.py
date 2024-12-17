@@ -1,6 +1,7 @@
 from collections import defaultdict, deque
 import sys
 import random
+import string
 sys.setrecursionlimit(10000)
 
 
@@ -21,6 +22,16 @@ class Grammar():
         self.startingNT = None
         self.counter = 1
 
+        self.first = defaultdict(set)
+        self.last = defaultdict(set)
+        self.follow = defaultdict(set)
+        self.precede = defaultdict(set)
+        self.followNT = defaultdict(set)
+        self.bigramms = defaultdict(set)
+
+        self.NT_To_T_Rules = defaultdict(list)
+        self.NT_To_NT_Rules = defaultdict(list)
+
 
     def readGrammar(self, startingNT : str):
         lines = sys.stdin.readlines()
@@ -34,6 +45,12 @@ class Grammar():
         self.updateGrammar()
 
         self.startingNT = startingNT
+
+    
+    def prepareForGeneration(self):
+        self.HNFTransform()
+        self.makeBigramms()
+        self.prepareForCYK()
 
 
     def updateGrammar(self):
@@ -213,125 +230,144 @@ class Grammar():
             print(NT, '- >', "".join(rightRule))
 
 
-def read(grammar):
+    def makeBigramms(self):
+        self.makeFirstAndLast()
+        self.makeFollow()
+        self.makePrecede()
+        self.useConditions()
+
     
-    visited = set([])
-    first = defaultdict(set)
-    adj = defaultdict(list)
-    for nonTerm, rule in grammar:
-        adj[nonTerm].append(rule)
-    # Создание множеств Last first ...
-    def dfs(nonTerm, first, f=0):
-        visited.add(nonTerm)
-        for rule in adj[nonTerm]:
-            if rule[f][0].islower():
-                first[nonTerm].add(rule[f][0])
+    def makeFirstAndLast(self):
+        visited = set([])
+        for NT in self.allNTs:
+            if NT not in visited:
+                self.makeFirstAndLastRecursion(NT, visited)
+
+    
+    def makeFirstAndLastRecursion(self, NT, visited):
+        visited.add(NT)
+        for rightRule in self.NT_To_Rules[NT]:
+            if isNT(rightRule[0]):
+                if rightRule[0] not in visited:
+                    self.makeFirstAndLastRecursion(rightRule[0])
+                self.first[NT] = self.first[NT].union(self.first[rightRule[0]])
             else:
-                if rule[f] not in visited:
-                    dfs(rule[f], first, f)
-                first[nonTerm] = first[nonTerm].union(first[rule[f]])
-
-    for nonTerm, rule in grammar:
-        if nonTerm not in visited:
-            dfs(nonTerm, first)
-    visited = set([])
-    last = defaultdict(set)
-    for nonTerm, rule in grammar:
-        if nonTerm not in visited:
-            dfs(nonTerm, last, -1)
-
-    follow = defaultdict(set)
-    changed= True
-    while changed:
-        changed=False
-        for (nonTerm, rule) in grammar:
-            if len(rule) > 1:
-                if follow[rule[0]].union(first[rule[1]]) != follow[rule[0]]:
-                    changed=True
-                follow[rule[0]] = follow[rule[0]].union(first[rule[1]])
-    preceding = defaultdict(set)
-    changed=True
-    while changed:
-        changed=False
-        for (nonTerm, rule) in grammar:
-            if len(rule) > 1:
-                if preceding[rule[1]].union(last[rule[0]]) != preceding[rule[1]]:
-                    changed=True
-                preceding[rule[1]] = preceding[rule[1]].union(last[rule[0]])
-    # Матрицу биграмм делаю
-    followNT = defaultdict(set)
-    for _, rule in grammar:
-        if len(rule) == 2:
-            followNT[rule[0]].add(rule[1])
-    
-    bigramms = defaultdict(set)
-    for key, gammas in last.items():
-        for y1 in gammas:
-            for y2 in follow[key]:
-                bigramms[y1].add(y2)
-
-    for key, gammas in preceding.items():
-        for y1 in gammas:
-            for y2 in first[key]:
-                bigramms[y1].add(y2)
-
-    for key, val in followNT.items():
-        for A2 in val:
-            for y1 in last[key]:
-                for y2 in first[A2]:
-                    bigramms[y1].add(y2)
+                self.first[NT].add(rightRule[0])
+            if isNT(rightRule[-1]):
+                if rightRule[-1] not in visited:
+                    self.makeFirstAndLastRecursion(rightRule[-1])
+                self.last[NT] = self.last[NT].union(self.last[rightRule[-1]])
+            else:
+                self.last[NT].add(rightRule[-1])
 
     
-    adj = defaultdict(list)
-    ed = defaultdict(list)
-    nTs = set([])
-    for nT, rule in grammar:
-        if len(rule) != 2:
-            ed[nT].append(rule[0][0])
-        else:
-            adj[nT].append(rule)
-        nTs.add(nT)          
-    def cyk(grammar, ed, word):
-        d= {nT : [[False for _ in range(len(word))] for _ in range(len(word))] for nT in nTs}
+    def makeFollow(self):
+        changed = True
+        while changed:
+            changed = False
+            for NT, rightRule in self.rules:
+                if len(rightRule) > 1:
+                    if not all(map(lambda terminal: terminal in self.follow[rightRule[0]], self.first[rightRule[1]])):
+                        changed = True
+                    self.follow[rightRule[0]] = self.follow[rightRule[0]].union(self.first[rightRule[1]])
+
+    
+    def makePrecede(self):
+        changed = True
+        while changed:
+            changed=False
+            for NT, rightRule in self.rules:
+                if len(rightRule) > 1:
+                    if not all(map(lambda terminal: terminal in self.precede[rightRule[1]], self.last[rightRule[0]])):
+                        changed=True
+                    self.precede[rightRule[1]] = self.precede[rightRule[1]].union(self.last[rightRule[0]])
+
+    
+    def makeFollowNT(self):
+        for _, rightRule in self.rules:
+            if len(rightRule) == 2:
+                self.followNT[rightRule[0]].add(rightRule[1])
+
+    
+    def useConditions(self):
+        for NT, gammas in self.last.items():
+            for y1 in gammas:
+                for y2 in self.follow[NT]:
+                    self.bigramms[y1].add(y2)
+
+        for NT, gammas in self.precede.items():
+            for y1 in gammas:
+                for y2 in self.first[NT]:
+                    self.bigramms[y1].add(y2)
+
+        for NT, val in self.followNT.items():
+            for A2 in val:
+                for y1 in self.last[NT]:
+                    for y2 in self.first[A2]:
+                        self.bigramms[y1].add(y2)
+    
+
+    def prepareForCYK(self):
+        for NT, rightRule in self.rules:
+            if len(rightRule) == 1:
+                self.NT_To_T_Rules[NT].append(rightRule[0])
+            else:
+                self.NT_To_NT_Rules[NT].append(rightRule)
+
+
+    def CYK(self, word):
+        d= {NT : [[False for _ in range(len(word))] for _ in range(len(word))] for NT in self.allNTs}
         for i in range(len(word)):
-            for nT, rules in ed.items():
-                for rule in rules:
-                    if word[i] == rule:
-                        d[nT][i][i]= True
+            for NT, rightRules in self.NT_To_T_Rules.items():
+                for rightRule in rightRules:
+                    if word[i] == rightRule:
+                        d[NT][i][i]= True
         for m in range(1, len(word)):
             for i in range(len(word) - m):
                 j = i + m
-                for nT, rules in grammar.items():
+                for NT, rightRules in self.NT_To_NT_Rules.items():
                     answer = False
-                    for rule in rules:
+                    for rightRule in rightRules:
                         for k in range(i, j):
-                            answer = answer or (d[rule[0]][i][k] and d[rule[1]][k+1][j])
-                    d[nT][i][j] = answer
-        return d['S'][0][len(word)-1]
-
-    # Генерация 
-    terminals = list(set([rule[0] for _, rule in grammar if len(rule) == 1]))
-    terminals = ['a', 'b', 'c', 'd']
-    starting_symbols = list(first['S'])
-    res = []
-    with open('tests_verify.txt', 'w') as tf:
-        with open('tests.txt', 'w') as f:
-            for i in range(100):
-                cur = random.choice(starting_symbols)
-                while bigramms[cur[-1]]:
-                    r = random.random()
-                    if r < 0.1:
-                        cur += random.choice(terminals)
-                    elif r < 0.25:
-                        break
-                    else:
-                        cur += random.choice(list(bigramms[cur[-1]]))
-                f.write(cur)
-                f.write(" 1\n" if cyk(adj, ed, cur) else " 0\n")
-                tf.write(cur + '\n')
-                if cyk(adj, ed, cur):
-                    res.append(i+1)
-    print(res)
-
+                            answer = answer or (d[rightRule[0]][i][k] and d[rightRule[1]][k+1][j])
+                    d[NT][i][j] = answer
+        return d[self.startingNT][0][len(word)-1]
     
 
+    def generate(self, 
+                 n=100, 
+                 testing=True, 
+                 allTerminals=True, 
+                 randomTerminalChance=0.1, 
+                 randomStopChance=0.15):
+        assert randomTerminalChance + randomStopChance <= 1, "Chances must sum up to 1!"
+
+        terminals = self.terminals.copy()
+        if allTerminals:
+            terminals = string.ascii_lowercase
+
+        startingTerminals = self.first(self.startingNT)
+
+        if testing:
+            verifyFile = open("verify_file.txt", 'w')
+            positiveGenerations = []
+
+        with open("tests.txt", 'w') as f:
+            for i in range(n):
+                current = random.choice(startingTerminals)
+                while self.bigramms[current[-1]]:
+                    r = random.random()
+                    if r < randomTerminalChance:
+                        current += random.choice(terminals)
+                    elif r < randomTerminalChance + randomStopChance:
+                        break
+                    else:
+                        current += random.choice(list(self.bigramms[current[-1]]))
+                    belongsToLanguage = self.CYK(current)
+                    f.write(f'{current} {1 if belongsToLanguage else 0}\n')
+                    if testing:
+                        verifyFile.write(f'{current}\n')
+                        positiveGenerations.append(str(i+1))
+        
+        if testing:
+            print(' '.join(positiveGenerations))

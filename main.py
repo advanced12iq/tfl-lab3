@@ -1,11 +1,10 @@
-from fuzz import read, Grammar
+from fuzz import Grammar
 
 def main():
     grammar = Grammar()
     grammar.readGrammar('S')
-    grammar.HNFTransform()
-    grammar.printGrammar()
-    read(grammar.rules)
+    grammar.prepareForGeneration()
+    grammar.generate()
 
 if __name__ == "__main__":
     main()
