@@ -2,7 +2,7 @@ from fuzz import Grammar
 
 def main():
     grammar = Grammar()
-    grammar.readGrammar('S')
+    grammar.readGrammar()
     grammar.prepareForGeneration()
     grammar.generate()
 

@@ -33,7 +33,7 @@ class Grammar():
         self.NT_To_NT_Rules = defaultdict(list)
 
 
-    def readGrammar(self, startingNT : str):
+    def readGrammar(self, startingNT=None):
         lines = sys.stdin.readlines()
 
         for line in lines:
@@ -45,6 +45,26 @@ class Grammar():
         self.updateGrammar()
 
         self.startingNT = startingNT
+        if not self.startingNT:
+            self.startingNT = self.findStartingNT()
+
+
+    def findStartingNT(self):
+        maxVisited = ("", 0)
+        for NT in self.allNTs:
+            visited = set([])
+            self.findStartingNTRecursion(NT, visited)
+            if len(visited) > maxVisited[1]:
+                maxVisited = (NT, len(visited))
+        return maxVisited[0]
+    
+
+    def findStartingNTRecurison(self, NT1, visited):
+        visited.add(NT1)
+        for rightRule in self.NT_To_Rules[NT1]:
+            for NT2 in getSetOFNTs(rightRule):
+                if NT2 not in visited:
+                    self.findStartingNTRecurison(NT2, visited)
 
     
     def prepareForGeneration(self):
