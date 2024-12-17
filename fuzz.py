@@ -249,13 +249,13 @@ class Grammar():
         for rightRule in self.NT_To_Rules[NT]:
             if isNT(rightRule[0]):
                 if rightRule[0] not in visited:
-                    self.makeFirstAndLastRecursion(rightRule[0])
+                    self.makeFirstAndLastRecursion(rightRule[0], visited)
                 self.first[NT] = self.first[NT].union(self.first[rightRule[0]])
             else:
                 self.first[NT].add(rightRule[0])
             if isNT(rightRule[-1]):
                 if rightRule[-1] not in visited:
-                    self.makeFirstAndLastRecursion(rightRule[-1])
+                    self.makeFirstAndLastRecursion(rightRule[-1], visited)
                 self.last[NT] = self.last[NT].union(self.last[rightRule[-1]])
             else:
                 self.last[NT].add(rightRule[-1])
@@ -342,11 +342,11 @@ class Grammar():
                  randomStopChance=0.15):
         assert randomTerminalChance + randomStopChance <= 1, "Chances must sum up to 1!"
 
-        terminals = self.terminals.copy()
+        terminals = list(self.terminals.copy())
         if allTerminals:
             terminals = string.ascii_lowercase
 
-        startingTerminals = self.first(self.startingNT)
+        startingTerminals = list(self.first[self.startingNT])
 
         if testing:
             verifyFile = open("verify_file.txt", 'w')
@@ -363,10 +363,11 @@ class Grammar():
                         break
                     else:
                         current += random.choice(list(self.bigramms[current[-1]]))
-                    belongsToLanguage = self.CYK(current)
-                    f.write(f'{current} {1 if belongsToLanguage else 0}\n')
-                    if testing:
-                        verifyFile.write(f'{current}\n')
+                belongsToLanguage = self.CYK(current)
+                f.write(f'{current} {1 if belongsToLanguage else 0}\n')
+                if testing:
+                    verifyFile.write(f'{current}\n')
+                    if belongsToLanguage:
                         positiveGenerations.append(str(i+1))
         
         if testing:
