@@ -59,12 +59,12 @@ class Grammar():
         return maxVisited[0]
     
 
-    def findStartingNTRecurison(self, NT1, visited):
+    def findStartingNTRecursion(self, NT1, visited):
         visited.add(NT1)
         for rightRule in self.NT_To_Rules[NT1]:
             for NT2 in getSetOFNTs(rightRule):
                 if NT2 not in visited:
-                    self.findStartingNTRecurison(NT2, visited)
+                    self.findStartingNTRecursion(NT2, visited)
 
     
     def prepareForGeneration(self):
