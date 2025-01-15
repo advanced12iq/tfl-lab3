@@ -254,6 +254,7 @@ class Grammar():
         self.makeFirstAndLast()
         self.makeFollow()
         self.makePrecede()
+        self.makeFollowNT()
         self.useConditions()
 
     
